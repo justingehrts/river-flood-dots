@@ -1,0 +1,32 @@
+name: Update river flood dots
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # twice an hour; GitHub may delay scheduled runs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build KMZ/KML
+        run: python scripts/build_river_dots.py
+      - name: Commit changes
+        run: |
+          git config user.name "river-flood-dots bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add output
+          git diff --cached --quiet || git commit -m "Update river dots $(date -u +'%Y-%m-%d %H:%MZ')"
+          git push
