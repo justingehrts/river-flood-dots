@@ -27,6 +27,6 @@ jobs:
         run: |
           git config user.name "river-flood-dots bot"
           git config user.email "actions@users.noreply.github.com"
-          git add output
+          git add output/observed_rivers.kmz output/status.json
           git diff --cached --quiet || git commit -m "Update river dots $(date -u +'%Y-%m-%d %H:%MZ')"
           git push
