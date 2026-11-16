@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: update
@@ -16,6 +18,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,3 +35,15 @@ jobs:
           git add output/observed_rivers.kmz output/status.json
           git diff --cached --quiet || git commit -m "Update river dots $(date -u +'%Y-%m-%d %H:%MZ')"
           git push
+      # Publish the KMZ and status.json at https://<user>.github.io/river-flood-dots/ . Only reached if the build above succeeded,
+      # so a failed run never replaces the last good site.
+      - name: Stage site
+        run: |
+          mkdir site
+          cp output/observed_rivers.kmz output/status.json site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy to Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
