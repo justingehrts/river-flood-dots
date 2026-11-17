@@ -8,6 +8,8 @@ Standard library only. Output goes to ./output:
 """
 import json
 import time
+import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
@@ -28,6 +30,7 @@ RAW_ICON_BASE = "https://raw.githubusercontent.com/justingehrts/river-flood-dots
 # (xmin, ymin, xmax, ymax) in degrees; CONUS by default.
 TILE_BOUNDS = (-125.0, 24.0, -66.0, 50.0)
 TILE_SIZE = 10.0
+TILE_PAUSE = 1.5   # seconds between tile requests, to stay under NOAA's rate limit
 
 # Only these categories are drawn; everything else (not_defined,
 # obs_not_current, out_of_service, low_threshold, ...) is hidden.
@@ -41,7 +44,7 @@ LABELS = {
 }
 
 
-def fetch_tile(xmin, ymin, xmax, ymax, tries=3):
+def fetch_tile(xmin, ymin, xmax, ymax, tries=6):
     qs = urllib.parse.urlencode({
         "bbox.xmin": xmin, "bbox.ymin": ymin,
         "bbox.xmax": xmax, "bbox.ymax": ymax,
@@ -49,12 +52,18 @@ def fetch_tile(xmin, ymin, xmax, ymax, tries=3):
     })
     req = urllib.request.Request(f"{API}?{qs}", headers={"User-Agent": "river-flood-dots"})
     for attempt in range(tries):
+        wait = 10 * (attempt + 1)
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
                 return json.load(r).get("gauges", [])
         except Exception as exc:  # noqa: BLE001
+            if isinstance(exc, urllib.error.HTTPError) and exc.code == 429:
+                retry_after = exc.headers.get("Retry-After", "")
+                if retry_after.isdigit():
+                    wait = max(wait, min(int(retry_after), 120))
             print(f"  tile {xmin},{ymin} attempt {attempt + 1} failed: {exc}")
-            time.sleep(5 * (attempt + 1))
+            if attempt < tries - 1:
+                time.sleep(wait)
     raise RuntimeError(f"tile {xmin},{ymin},{xmax},{ymax} failed after {tries} tries")
 
 
@@ -70,6 +79,7 @@ def fetch_all():
             print(f"tile {box}: {len(got)} gauges")
             for g in got:
                 gauges[g["lid"]] = g  # de-duplicate across tile edges
+            time.sleep(TILE_PAUSE)
             x += TILE_SIZE
         y += TILE_SIZE
     return list(gauges.values())
@@ -126,7 +136,12 @@ def build_kml(rows, icon_base, stamp):
 
 def main():
     t0 = time.time()
-    gauges = fetch_all()
+    try:
+        gauges = fetch_all()
+    except RuntimeError as exc:
+        # Keep the previous output rather than publishing a partial map.
+        print(f"::warning::NOAA fetch failed, keeping previous output: {exc}")
+        sys.exit(0)
     raw_counts = Counter(g["status"]["observed"]["floodCategory"] for g in gauges)
 
     rows = {c: [] for c in SHOWN}
