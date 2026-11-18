@@ -30,7 +30,7 @@ RAW_ICON_BASE = "https://raw.githubusercontent.com/justingehrts/river-flood-dots
 # (xmin, ymin, xmax, ymax) in degrees; CONUS by default.
 TILE_BOUNDS = (-125.0, 24.0, -66.0, 50.0)
 TILE_SIZE = 10.0
-TILE_PAUSE = 1.5   # seconds between tile requests, to stay under NOAA's rate limit
+TILE_PAUSE = 6.0   # seconds between tile requests, to stay under NOAA's rate limit
 
 # Only these categories are drawn; everything else (not_defined,
 # obs_not_current, out_of_service, low_threshold, ...) is hidden.
@@ -52,15 +52,16 @@ def fetch_tile(xmin, ymin, xmax, ymax, tries=6):
     })
     req = urllib.request.Request(f"{API}?{qs}", headers={"User-Agent": "river-flood-dots"})
     for attempt in range(tries):
-        wait = 10 * (attempt + 1)
+        wait = 30 * (attempt + 1)
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
                 return json.load(r).get("gauges", [])
         except Exception as exc:  # noqa: BLE001
             if isinstance(exc, urllib.error.HTTPError) and exc.code == 429:
+                wait = max(wait, 60)
                 retry_after = exc.headers.get("Retry-After", "")
                 if retry_after.isdigit():
-                    wait = max(wait, min(int(retry_after), 120))
+                    wait = max(wait, min(int(retry_after), 180))
             print(f"  tile {xmin},{ymin} attempt {attempt + 1} failed: {exc}")
             if attempt < tries - 1:
                 time.sleep(wait)
@@ -139,9 +140,10 @@ def main():
     try:
         gauges = fetch_all()
     except RuntimeError as exc:
-        # Keep the previous output rather than publishing a partial map.
-        print(f"::warning::NOAA fetch failed, keeping previous output: {exc}")
-        sys.exit(0)
+        # Nothing has been written yet, so the previous output stays in place.
+        # Exit nonzero so the run shows red instead of silently going stale.
+        print(f"::error::NOAA fetch failed, previous output kept: {exc}")
+        sys.exit(1)
     raw_counts = Counter(g["status"]["observed"]["floodCategory"] for g in gauges)
 
     rows = {c: [] for c in SHOWN}
