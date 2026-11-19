@@ -32,7 +32,7 @@ jobs:
         run: |
           git config user.name "river-flood-dots bot"
           git config user.email "actions@users.noreply.github.com"
-          git add output/observed_rivers.kmz output/status.json
+          git add output/observed_rivers.kmz output/forecast_rivers.kmz output/status.json
           git diff --cached --quiet || git commit -m "Update river dots $(date -u +'%Y-%m-%d %H:%MZ')"
           git push
       # Publish the KMZ and status.json at https://<user>.github.io/river-flood-dots/ . Only reached if the build above succeeded,
@@ -40,7 +40,7 @@ jobs:
       - name: Stage site
         run: |
           mkdir site
-          cp output/observed_rivers.kmz output/status.json site/
+          cp output/observed_rivers.kmz output/forecast_rivers.kmz output/status.json site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
