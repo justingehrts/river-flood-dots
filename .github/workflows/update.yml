@@ -1,8 +1,8 @@
 name: Update river flood dots
 
 on:
-  schedule:
-    - cron: "7,37 * * * *"   # twice an hour; GitHub may delay scheduled runs
+  # Triggered every 30 min by cron-job.org via workflow_dispatch (GitHub's own
+  # schedule fired too rarely and collided with those runs, so it was removed).
   workflow_dispatch:
 
 permissions:
@@ -20,9 +20,11 @@ jobs:
     timeout-minutes: 15
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy_retry.outputs.page_url || steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main   # latest main at job start, not the commit that was current when the run was queued
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -34,7 +36,8 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add output/observed_rivers.kmz output/forecast_rivers.kmz output/status.json
           git diff --cached --quiet || git commit -m "Update river dots $(date -u +'%Y-%m-%d %H:%MZ')"
-          git pull --rebase origin main
+          # Output files are rebuilt in full each run, so on any conflict keep this run's files.
+          git pull --rebase -X theirs origin main
           git push
       # Publish the KMZ and status.json at https://<user>.github.io/river-flood-dots/ . Only reached if the build above succeeded,
       # so a failed run never replaces the last good site.
@@ -47,4 +50,12 @@ jobs:
           path: site
       - name: Deploy to Pages
         id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Wait before retrying Pages deploy
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+      - name: Deploy to Pages (retry)
+        id: deploy_retry
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
