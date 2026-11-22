@@ -1,19 +1,19 @@
 {
-  "updated_utc": "2026-11-22 08:37 UTC",
+  "updated_utc": "2026-11-22 09:09 UTC",
   "gauges_fetched": 12387,
-  "gauges_shown": 6952,
+  "gauges_shown": 6951,
   "shown_by_category": {
     "major": 5,
-    "moderate": 13,
-    "minor": 3,
-    "action": 31,
-    "no_flooding": 6900
+    "moderate": 10,
+    "minor": 6,
+    "action": 26,
+    "no_flooding": 6904
   },
   "hidden_by_category": {
     "not_defined": 4053,
     "obs_not_current": 811,
     "out_of_service": 501,
-    "low_threshold": 70
+    "low_threshold": 71
   },
   "forecast_gauges_shown": 1862,
   "forecast_shown_by_category": {
@@ -23,5 +23,5 @@
     "action": 51,
     "no_flooding": 1794
   },
-  "seconds": 440.4
+  "seconds": 577.6
 }
