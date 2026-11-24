@@ -1,13 +1,13 @@
 {
-  "updated_utc": "2026-11-24 07:37 UTC",
+  "updated_utc": "2026-11-24 08:11 UTC",
   "gauges_fetched": 12387,
   "gauges_shown": 6959,
   "shown_by_category": {
     "major": 5,
     "moderate": 6,
-    "minor": 3,
-    "action": 30,
-    "no_flooding": 6915
+    "minor": 5,
+    "action": 29,
+    "no_flooding": 6914
   },
   "hidden_by_category": {
     "not_defined": 4065,
@@ -23,5 +23,5 @@
     "action": 26,
     "no_flooding": 1744
   },
-  "seconds": 421.1
+  "seconds": 693.2
 }
